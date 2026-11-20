@@ -1,0 +1,56 @@
+# Containerised deployment: postgres + api + web. All ports are bound to loopback (the app has no auth).
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${PG_USER:-tasktools}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-tasktools}
+      POSTGRES_DB: ${PG_DB:-tasktools}
+    ports:
+      - "127.0.0.1:${PG_PORT:-5440}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-tasktools}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ./backend
+      target: runtime
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Overrides any host-mode DATABASE_URL from .env: inside the network postgres is reachable as "postgres".
+      DATABASE_URL: postgresql://${PG_USER:-tasktools}:${PG_PASSWORD:-tasktools}@postgres:5432/${PG_DB:-tasktools}
+      DATA_DIR: /data
+    volumes:
+      - task_data:/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:${API_PORT:-8010}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      target: runner
+      args:
+        API_URL: http://api:8000
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3010}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  task_data:

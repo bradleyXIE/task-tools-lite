@@ -1,0 +1,24 @@
+# Container dev mode (override): docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# Hot reload for backend (uvicorn --reload) and web (next dev) from bind-mounted sources.
+services:
+  api:
+    build:
+      context: ./backend
+      target: dev
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/tests:/app/tests
+      - task_data:/data
+
+  web:
+    build:
+      context: ./web
+      target: dev
+    environment:
+      API_URL: http://api:8000
+    volumes:
+      - ./web/src:/app/src
+      - web_next:/app/.next
+
+volumes:
+  web_next:
