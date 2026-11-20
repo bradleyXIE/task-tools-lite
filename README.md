@@ -29,9 +29,13 @@ Published ports are bound to `127.0.0.1` only. The app has no authentication.
 Requirements: Docker with Compose v2.24 or newer.
 
 ```bash
-cp .env.example .env          # then set LLM_API_KEY (see "LLM setup")
-docker compose up -d --build --wait
+make run                      # creates .env if missing, builds, starts Postgres + API + Web (all in Docker)
+# edit .env and set LLM_API_KEY (see "LLM setup"), then:
+make restart
 ```
+
+Everything the app needs (Python, Node build, Postgres and the agent's CLI tools such as curl, nmap, dig, rg) lives in the
+Docker images, so Docker is the only requirement. Other commands: `make stop`, `make logs`, `make ps`, `make shell`, `make help`.
 
 Open:
 
@@ -42,10 +46,10 @@ Open:
 Stop the stack without losing data:
 
 ```bash
-docker compose down           # keeps the pgdata and task_data volumes
+make stop                     # keeps the pgdata and task_data volumes
 ```
 
-Never add `-v` unless you really want to delete the database. The Makefile wrappers (`make up`, `make down`, `make logs`) never remove volumes.
+Never add `-v` to `docker compose down` unless you really want to delete the database. No Makefile target removes volumes.
 
 Different ports (for example when 8010 or 3010 are taken):
 
